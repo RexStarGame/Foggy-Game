@@ -236,6 +236,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   movementSpeed: 1
-  enemyPrefabs: []
+  enemyPrefabs:
+  - {fileID: 7053256898161017811}
   spawnPoint: {fileID: 0}
-  respawnTime: 60
+  respawnTime: 6
