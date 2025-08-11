@@ -8,6 +8,7 @@ public class FrogMovement : MonoBehaviour
     private bool isMoving;
     private Vector3 origPos, targetPos;
     private float timeToMove = 0.2f;
+    public float gridSize = 2f;
     
     void Update()
     {
@@ -30,7 +31,7 @@ public class FrogMovement : MonoBehaviour
         float elapsedTime = 0;
 
     origPos = transform.position;
-        targetPos = origPos + direction;
+        targetPos = origPos + direction * gridSize;
 
         while (elapsedTime < timeToMove)
         {
