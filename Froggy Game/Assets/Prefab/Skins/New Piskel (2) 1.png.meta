@@ -198,7 +198,9 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      New Piskel (2) 1_0: -3685760008999291469
+      New Piskel (2) 1_1: 726907920846608859
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
