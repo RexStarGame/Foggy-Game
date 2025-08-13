@@ -78,7 +78,26 @@ public class FrogMovement : MonoBehaviour
         transform.position = targetPos;
         isMoving = false;
     }
-
+    public void GameOver()
+    {
+        if (isDead) return; // already dead, ignore further calls
+        isDead = true;
+        // VFX/UI
+        if (blood) blood.SetActive(true);
+        if (deathMenu) deathMenu.SetActive(true);
+        // stop current motion instantly
+        StopAllCoroutines();
+        isMoving = false;
+        // ❌ Turn off collisions so cars pass through
+        foreach (var c in myCols) if (c) c.enabled = false;
+        // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
+        foreach (var t in GetComponentsInChildren<Transform>(true))
+            t.gameObject.layer = deadLayer;
+        // enter slow-mo, then Update() will freeze after slowMoSeconds
+        Time.timeScale = slowMoScale;
+        Time.fixedDeltaTime = defaultFixedDelta * Time.timeScale;
+        freezeAtUnscaledTime = Time.unscaledTime + slowMoSeconds;
+    }
     void OnTriggerEnter2D(Collider2D other)
     {
         if (!isDead && other.CompareTag("Enemies"))

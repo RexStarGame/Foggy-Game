@@ -2111,15 +2111,17 @@ MonoBehaviour:
   enemyPrefabs:
   - {fileID: 2677865009199217770, guid: 168948658a7715a4495a13f028cf3035, type: 3}
   - {fileID: 4325697384523661356, guid: 72d4b469d164b9548a4d631bcad57b76, type: 3}
+  - {fileID: 3974555117872409064, guid: 14171cbffb2ae114eb77a4825a4183ef, type: 3}
+  - {fileID: 4258809092431979052, guid: 61781c40d37e7e2449698eff510a414e, type: 3}
   spawnPoints:
   - {fileID: 5004697654976768798}
   - {fileID: 1052870807113486525}
   - {fileID: 7854730540070886378}
   preloadPerPrefab: 5
   firstSpawnDelay: 1
-  spawnInterval: 4
+  spawnInterval: 3
   onlyOneAtATime: 0
-  batchSpawnCount: 2
+  batchSpawnCount: 3
   requireDistinctPrefabs: 1
   requireDistinctSpawnPoints: 1
   defaultLifeTime: 20
@@ -2129,7 +2131,7 @@ MonoBehaviour:
   debugLogging: 0
   showHud: 0
   debugPrintInterval: 2
-  simultaneousChance: 0.5
+  simultaneousChance: 0.551
   staggerDelayMin: 1
   staggerDelayMax: 5
 --- !u!1 &8754116072973149651
