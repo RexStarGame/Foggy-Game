@@ -112,13 +112,43 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1364863137446474304, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2712040183203229180}
   m_SourcePrefab: {fileID: 100100000, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
 --- !u!4 &300356986084201577 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 243839466467323966, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
   m_PrefabInstance: {fileID: 525055996127241303}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1565467541304759831 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1364863137446474304, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
+  m_PrefabInstance: {fileID: 525055996127241303}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &2712040183203229180
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1565467541304759831}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 1b870a55d6a8b21409fc13e1836c12ed, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1001 &569110147748708122
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -283,6 +313,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3299065718955850491}
     m_Modifications:
+    - target: {fileID: 1052870807113486525, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -25.02
+      objectReference: {fileID: 0}
+    - target: {fileID: 5004697654976768798, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -25.09
+      objectReference: {fileID: 0}
     - target: {fileID: 5727430635041741504, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
       propertyPath: m_LocalPosition.x
       value: -14.193218
@@ -322,6 +360,10 @@ PrefabInstance:
     - target: {fileID: 5727430635041741504, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7854730540070886378, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -24.94
       objectReference: {fileID: 0}
     - target: {fileID: 9043625156340354306, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
       propertyPath: m_Name
@@ -1625,6 +1667,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3299065718955850491}
     m_Modifications:
+    - target: {fileID: 1302255089885965355, guid: 4f638d44a2e27864884f834360839c23, type: 3}
+      propertyPath: playerPos
+      value: 
+      objectReference: {fileID: 300356986084201577}
     - target: {fileID: 2733702954442882157, guid: 4f638d44a2e27864884f834360839c23, type: 3}
       propertyPath: m_Name
       value: Lava (1)

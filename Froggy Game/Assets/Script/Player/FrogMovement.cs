@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.AdaptivePerformance.Provider;
 using UnityEngine.SceneManagement;
 
 public class FrogMovement : MonoBehaviour
@@ -28,8 +29,10 @@ public class FrogMovement : MonoBehaviour
     int defaultLayer;
     int deadLayer; // we'll try "Dead", else fall back to Ignore Raycast (2)
 
+    Animator move;
     void Start()
     {
+        move = GetComponent<Animator>();
         if (blood) blood.SetActive(false);
 
         defaultFixedDelta = Time.fixedDeltaTime;
@@ -64,9 +67,30 @@ public class FrogMovement : MonoBehaviour
     private System.Collections.IEnumerator MovePlayer(Vector3 direction)
     {
         isMoving = true;
+
+        // Set animation state to moving
+        move.SetBool("JumpMove", true);
+        move.SetBool("Idle", false);
+
+        // Set facing direction
+        if (direction == Vector3.up)
+            transform.rotation = Quaternion.Euler(0, 0, 0);
+        else if (direction == Vector3.down)
+            transform.rotation = Quaternion.Euler(0, 0, 180);
+        else if (direction == Vector3.left)
+            transform.rotation = Quaternion.Euler(0, 0, 90);
+        else if (direction == Vector3.right)
+            transform.rotation = Quaternion.Euler(0, 0, -90);
+
         float t = 0f;
         origPos = transform.position;
         targetPos = origPos + direction * gridSize;
+        
+        targetPos.x = Mathf.Clamp(targetPos.x, -11.5f, 11.5f);
+
+        float maxValue = Mathf.Infinity;
+        float minValue = -6.0f;
+        targetPos.y = Mathf.Clamp(targetPos.y, minValue,maxValue );
 
         while (t < timeToMove)
         {
@@ -76,8 +100,14 @@ public class FrogMovement : MonoBehaviour
         }
 
         transform.position = targetPos;
+
+        // Stop moving → back to idle
+        move.SetBool("JumpMove", false);
+        move.SetBool("Idle", true);
+
         isMoving = false;
     }
+
     public void GameOver()
     {
         if (isDead) return; // already dead, ignore further calls
