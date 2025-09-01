@@ -1567,6 +1567,11 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &355068941 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1364863137446474304, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
+  m_PrefabInstance: {fileID: 1828559137}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &356868980
 GameObject:
   m_ObjectHideFlags: 0
@@ -2933,7 +2938,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 750079342}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c700c9526f3bb1747ac1f7fb10e0c0c7, type: 3}
   m_Name: 
@@ -4800,7 +4805,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3651204134800621950, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
   m_PrefabInstance: {fileID: 1828559137}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 355068941}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5dbe40292c001c498c59c3412d55681, type: 3}
@@ -4811,6 +4816,28 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 243839466467323966, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
   m_PrefabInstance: {fileID: 1828559137}
   m_PrefabAsset: {fileID: 0}
+--- !u!95 &1115824640
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 355068941}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 1b870a55d6a8b21409fc13e1836c12ed, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1142742318
 GameObject:
   m_ObjectHideFlags: 0
@@ -6940,7 +6967,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1364863137446474304, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1115824640}
   m_SourcePrefab: {fileID: 100100000, guid: 1af28d486ba24604c80c8f0282e2f499, type: 3}
 --- !u!1 &1838273561
 GameObject:
@@ -7999,6 +8029,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3156520165988511164, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4952986884945109022, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
       propertyPath: batchSpawnCount
       value: 2
@@ -8047,6 +8081,14 @@ PrefabInstance:
       propertyPath: generator
       value: 
       objectReference: {fileID: 750079343}
+    - target: {fileID: 8266660976655317373, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8659095438411779043, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9043625156340354306, guid: bdbe5f1882468f04290d331b2125cc69, type: 3}
       propertyPath: m_Name
       value: LevelChunk

@@ -15,10 +15,11 @@ public class ChunkSpawnTrigger : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (!owner || !generator) return;
-        if (!owner.spawnedNext && other.CompareTag("Player"))
-        {
-            owner.spawnedNext = true;
-            generator.SpawnNext(owner);
-        }
+        if (!other.CompareTag("Player")) return;
+        if (owner.spawnedNext) return;           // guard
+
+        owner.spawnedNext = true;
+        GetComponent<Collider2D>().enabled = false; // slå fra, så den ikke kan trigges igen
+        generator.SpawnNext(owner);
     }
 }
