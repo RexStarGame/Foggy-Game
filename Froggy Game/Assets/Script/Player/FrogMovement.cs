@@ -118,9 +118,9 @@ public class FrogMovement : MonoBehaviour
         // stop current motion instantly
         StopAllCoroutines();
         isMoving = false;
-        // ❌ Turn off collisions so cars pass through
+       
         foreach (var c in myCols) if (c) c.enabled = false;
-        // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
+ 
         foreach (var t in GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = deadLayer;
         // enter slow-mo, then Update() will freeze after slowMoSeconds
