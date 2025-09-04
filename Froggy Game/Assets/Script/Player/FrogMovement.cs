@@ -136,6 +136,7 @@ public class FrogMovement : MonoBehaviour
         StopAllCoroutines();
         isMoving = false;
 
+
         // Disable collisions
         foreach (var c in myCols) if (c) c.enabled = false;
 
