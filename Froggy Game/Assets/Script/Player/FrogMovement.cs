@@ -10,6 +10,8 @@ public class FrogMovement : MonoBehaviour
     public float gridSize = 2f;
     public float timeToMove = 0.2f;
 
+    // Score
+    [SerializeField] private PlayerScore playerScore;
     // UI / VFX
     [SerializeField] GameObject deathMenu;
     [SerializeField] GameObject blood;
@@ -101,6 +103,19 @@ public class FrogMovement : MonoBehaviour
 
         transform.position = targetPos;
 
+        // ✅ update score after finishing a move
+        if (playerScore != null)
+        {
+            playerScore.TryAddScore(transform.position);
+        }
+
+        // Stop moving → back to idle
+        move.SetBool("JumpMove", false);
+        move.SetBool("Idle", true);
+
+        isMoving = false;
+
+
         // Stop moving → back to idle
         move.SetBool("JumpMove", false);
         move.SetBool("Idle", true);
@@ -118,9 +133,9 @@ public class FrogMovement : MonoBehaviour
         // stop current motion instantly
         StopAllCoroutines();
         isMoving = false;
-        // ❌ Turn off collisions so cars pass through
+        // Turn off collisions so cars pass through
         foreach (var c in myCols) if (c) c.enabled = false;
-        // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
+        // Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
         foreach (var t in GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = deadLayer;
         // enter slow-mo, then Update() will freeze after slowMoSeconds
@@ -142,10 +157,10 @@ public class FrogMovement : MonoBehaviour
             StopAllCoroutines();
             isMoving = false;
 
-            // ❌ Turn off collisions so cars pass through
+            // Turn off collisions so cars pass through
             foreach (var c in myCols) if (c) c.enabled = false;
 
-            // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
+            // Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
             foreach (var t in GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = deadLayer;
 
