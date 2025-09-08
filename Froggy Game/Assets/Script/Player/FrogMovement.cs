@@ -10,6 +10,11 @@ public class FrogMovement : MonoBehaviour
     public float gridSize = 2f;
     public float timeToMove = 0.2f;
 
+    // Score
+    [SerializeField] private PlayerScore playerScore;
+    [SerializeField] private DeathScreenUI deathScreenUI;
+    [SerializeField] private GameObject flyCollectParticles;
+
     // UI / VFX
     [SerializeField] GameObject deathMenu;
     [SerializeField] GameObject blood;
@@ -101,6 +106,19 @@ public class FrogMovement : MonoBehaviour
 
         transform.position = targetPos;
 
+        //+ update score after finishing a move
+        if (playerScore != null)
+        {
+            playerScore.TryAddScore(transform.position);
+        }
+
+        // Stop moving → back to idle
+        move.SetBool("JumpMove", false);
+        move.SetBool("Idle", true);
+
+        isMoving = false;
+
+
         // Stop moving → back to idle
         move.SetBool("JumpMove", false);
         move.SetBool("Idle", true);
@@ -110,20 +128,26 @@ public class FrogMovement : MonoBehaviour
 
     public void GameOver()
     {
-        if (isDead) return; // already dead, ignore further calls
+        if (isDead) return;
         isDead = true;
+
         // VFX/UI
         if (blood) blood.SetActive(true);
-        if (deathMenu) deathMenu.SetActive(true);
-        // stop current motion instantly
+
+        // Stop motion
         StopAllCoroutines();
         isMoving = false;
-       
+        // ❌ Turn off collisions so cars pass through
         foreach (var c in myCols) if (c) c.enabled = false;
- 
+        // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
         foreach (var t in GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = deadLayer;
-        // enter slow-mo, then Update() will freeze after slowMoSeconds
+
+        // Show death screen with the final score
+        if (deathScreenUI != null && playerScore != null)
+            deathScreenUI.ShowDeathScreen(playerScore.score);
+
+        // Slow-motion effect
         Time.timeScale = slowMoScale;
         Time.fixedDeltaTime = defaultFixedDelta * Time.timeScale;
         freezeAtUnscaledTime = Time.unscaledTime + slowMoSeconds;
@@ -132,30 +156,29 @@ public class FrogMovement : MonoBehaviour
     {
         if (!isDead && other.CompareTag("Enemies"))
         {
-            isDead = true;
-
-            // VFX/UI
-            if (blood) blood.SetActive(true);
-            if (deathMenu) deathMenu.SetActive(true);
-
-            // stop current motion instantly
-            StopAllCoroutines();
-            isMoving = false;
-
-            // ❌ Turn off collisions so cars pass through
-            foreach (var c in myCols) if (c) c.enabled = false;
-
-            // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
-            foreach (var t in GetComponentsInChildren<Transform>(true))
-                t.gameObject.layer = deadLayer;
-
-            // enter slow-mo, then Update() will freeze after slowMoSeconds
-            Time.timeScale = slowMoScale;
-            Time.fixedDeltaTime = defaultFixedDelta * Time.timeScale;
-            freezeAtUnscaledTime = Time.unscaledTime + slowMoSeconds;
-
+            GameOver();
+        }
+        else if (other.CompareTag("Fly")) // 🪰 <-- new check
+        {
+            CollectFly(other.gameObject);
         }
     }
+    private void CollectFly(GameObject fly)
+    {
+        if (playerScore != null)
+        {
+            playerScore.AddScore(500); // add 500 points
+        }
+
+        if (flyCollectParticles != null)
+        {
+            GameObject particles = Instantiate(flyCollectParticles, fly.transform.position, Quaternion.identity);
+            Destroy(particles, 2f); // clean up after a short delay
+        }
+
+        Destroy(fly); // remove the fly from the scene
+    }
+
     public void RestartGame()
     { 
         // restore (not strictly needed before reload, but safe if you later respawn instead)
