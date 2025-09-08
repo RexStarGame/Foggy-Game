@@ -1,123 +1,213 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Minimal chunk-komponent med ankre. Sæt 'entry' i bunden og 'exit' i toppen af dit chunk.
+/// </summary>
+
+
+/// <summary>
+/// Drift-fri level generator: next.entry snappes til yCursor (sidste top) + extraGapY.
+/// Kræver ankre som standard (kan slås fra), runder Y for at undgå float-drift,
+/// auto-spawner foran spilleren og despawner bagved.
+/// </summary>
 public class LevelGenerator : MonoBehaviour
 {
+    public Transform entry; // nederste kant
+    public Transform exit;  // øverste kant
+    [Header("Spawn Mode")]
+    [Tooltip("If true, spawns are handled automatically from Update()")]
+    public bool useAutoSpawn = true;
+    [SerializeField] private float spawnCooldown = 0.05f; // sikring mod dobbelt-spawn
+    private float lastSpawnTime = -999f;
+
     [Header("Setup")]
+    [Tooltip("Prefabs der hver indeholder et LevelChunk (på sig selv eller child).")]
     public GameObject[] chunkPrefabs;
-    public Transform spawnPointA;   // hvor første chunk placeres (valgfrit)
+    [Tooltip("Placering af første chunk (valgfri).")]
+    public Transform spawnPointA;
+    [Tooltip("Spillerens transform (bruges til auto-spawn/despawn).")]
     public Transform player;
 
     [Header("Placement")]
-    public float extraGapY = 0f;        // afstand mellem chunks i Y
-    public bool alternateFlip = false;  // spejl hver anden for variation
+    [Tooltip("Lodret afstand mellem chunks (oven på exit->entry justering).")]
+    public float extraGapY = 0f;
+    [Tooltip("Lås alle chunks til samme X-koordinat.")]
+    public bool lockX = true;
+    [Tooltip("X-koordinat til lock.")]
+    public float lockXValue = 0f;
 
     [Header("Lifetime")]
-    public int keepChunks = 6;              
+    [Tooltip("Hvor mange chunks holdes i live-køen.")]
+    public int keepChunks = 6;
+    [Tooltip("Despawn når spilleren er så langt over chunk-top (Y).")]
     public float despawnBehindDistance = 40f;
+    [Tooltip("Spawn når spilleren er så tæt på sidste top (Y).")]
+    public float spawnAheadDistance = 25f;
 
+    [Header("Validation")]
+    [Tooltip("If true, refuse to spawn chunks that don't have entry+exit anchors.")]
+    public bool requireAnchors = true;
+    [Tooltip("Round final Y positions to this step to avoid float drift.")]
+    public float roundStep = 0.001f;
+
+    // Runtime
     private readonly Queue<LevelChunk> live = new Queue<LevelChunk>();
-    private bool flipNext = false;
-    private bool quitting = false;
+    private LevelChunk lastChunk;
+    private bool quitting;
+    private float yCursor; // præcis top-Y for sidste chunk (drift-fri lineal)
 
     private void OnApplicationQuit() => quitting = true;
 
     private void Start()
     {
+        keepChunks = Mathf.Max(1, keepChunks);
+
         if (chunkPrefabs == null || chunkPrefabs.Length == 0)
         {
             Debug.LogError("[LevelGenerator] No chunkPrefabs assigned.");
+            enabled = false;
             return;
         }
 
-        // Spawn første chunk ved spawnPointA (eller Vector3.zero)
+        // ---- Første chunk ----
         Vector3 startPos = spawnPointA ? spawnPointA.position : Vector3.zero;
-        var firstGO = Instantiate(GetRandomPrefab(), startPos, Quaternion.identity);
-        var first = firstGO.GetComponent<LevelChunk>() ?? firstGO.GetComponentInChildren<LevelChunk>();
-        if (first == null)
+
+        GameObject firstGO = Instantiate(GetRandomPrefab(), startPos, Quaternion.identity);
+        if (!TryGetChunk(firstGO, out var first))
         {
-            Debug.LogError("[LevelGenerator] First chunk missing LevelChunk on root/children.");
-            if (firstGO) Destroy(firstGO);
+            Debug.LogError("[LevelGenerator] First chunk missing LevelChunk.");
+            Destroy(firstGO);
+            enabled = false;
             return;
         }
 
-        // Sikr at første chunk står præcis med sin bund på startPos.y (så kæden starter pænt)
-        Bounds firstB = GetWorldBounds(firstGO.transform);
-        if (firstB.size != Vector3.zero)
+        if (requireAnchors && first.entry == null)
         {
-            float bottomY = firstB.min.y;
-            float dy = startPos.y - bottomY;
-            firstGO.transform.position += new Vector3(0f, dy, 0f);
+            Debug.LogError("[LevelGenerator] First chunk missing 'entry' while requireAnchors = true.");
+            Destroy(firstGO);
+            enabled = false;
+            return;
         }
+
+        // Justér så entry rammer startPos.y, ellers brug bund-bounds
+        if (first.entry != null)
+        {
+            var p = firstGO.transform.position;
+            p.y += (startPos.y - first.entry.position.y);
+            firstGO.transform.position = p;
+        }
+        else
+        {
+            AlignBottomToY(firstGO.transform, startPos.y);
+        }
+
+        RoundY(firstGO.transform, roundStep);
+        if (lockX) SetX(firstGO.transform, lockXValue);
 
         live.Enqueue(first);
+        lastChunk = first;
+        yCursor = GetTopY(first); // cursor = præcis første top
 
-        // Seed 2-3 ekstra chunks så du kan se banen med det samme
+        // Seed et par stykker mere
         int seed = Mathf.Clamp(keepChunks - 1, 0, 3);
-        var current = first;
-        for (int i = 0; i < seed; i++)
+        for (int i = 0; i < seed; i++) SpawnNextByCursor();
+        lastSpawnTime = Time.time;
+    }
+
+    private void Update()
+    {
+        if (!player) return;
+
+        // DESPAWN – fjern ældste bag spilleren
+        if (live.Count > 0)
         {
-            SpawnNext(current);
-            var arr = live.ToArray();
-            current = arr[arr.Length - 1];
+            var oldest = live.Peek();
+            if (!oldest) live.Dequeue();
+            else
+            {
+                float oldestTop = GetTopY(oldest);
+                if (player.position.y - oldestTop > despawnBehindDistance)
+                {
+                    live.Dequeue();
+                    if (oldest) Destroy(oldest.gameObject);
+                }
+            }
+        }
+
+        // AUTO-SPAWN – læg nyt foran spilleren
+        if (useAutoSpawn && lastChunk)
+        {
+            if (player.position.y + spawnAheadDistance > yCursor &&
+                Time.time - lastSpawnTime >= spawnCooldown)
+            {
+                SpawnNextByCursor();
+                lastSpawnTime = Time.time;
+            }
         }
     }
 
-    public void SpawnNext(LevelChunk from)
+    // ---------- Public: manuel spawn hvis du vil kalde den fra UI/Debug ----------
+    public void SpawnNext()
     {
-        if (quitting || from == null) return;
+        SpawnNextByCursor();
+        lastSpawnTime = Time.time;
+    }
 
-        var go = Instantiate(GetRandomPrefab());
-        var next = go.GetComponent<LevelChunk>() ?? go.GetComponentInChildren<LevelChunk>();
-        if (next == null)
+    // ---------- Intern: drift-fri spawn baseret på yCursor ----------
+    private void SpawnNextByCursor()
+    {
+        if (quitting) return;
+
+        GameObject prefab = GetRandomPrefab();
+        if (!prefab)
+        {
+            Debug.LogWarning("[LevelGenerator] GetRandomPrefab returned null.");
+            return;
+        }
+
+        GameObject go = Instantiate(prefab, Vector3.zero, Quaternion.identity);
+        if (!TryGetChunk(go, out var next))
         {
             Debug.LogError("[LevelGenerator] Spawned prefab has no LevelChunk.");
             Destroy(go);
             return;
         }
 
-        // Flip FØR vi måler bounds/alignment
-        if (alternateFlip && flipNext) MirrorX(go.transform);
-        flipNext = alternateFlip ? !flipNext : flipNext;
-
-        // MÅL forrige top og næste bund
-        Bounds fromB = GetWorldBounds(from.transform);
-        Bounds nextB = GetWorldBounds(go.transform);
-
-        if (fromB.size == Vector3.zero || nextB.size == Vector3.zero)
+        if (requireAnchors && next.entry == null)
         {
-            Debug.LogWarning("[LevelGenerator] Bounds not found on one of the chunks; falling back to entry/exit if present.");
+            Debug.LogError("[LevelGenerator] Missing entry on spawned chunk while requireAnchors = true.");
+            Destroy(go);
+            return;
+        }
 
-            // Fallback: brug LevelChunk entry/exit, hvis de findes
-            if (from.exit != null && next.entry != null)
-            {
-                Vector3 target = from.exit.position + Vector3.up * extraGapY;
-                Vector3 delta = target - next.entry.position;
-                go.transform.position += delta;
-            }
-            else
-            {
-                // Sidste fallback: placer bare ved forrige tops Y
-                float targetY = (from.exit ? from.exit.position.y : from.transform.position.y) + extraGapY;
-                float dy = targetY - go.transform.position.y;
-                go.transform.position += new Vector3(0f, dy, 0f);
-            }
+        // Placer så next.entry (eller bund-bounds) = yCursor + extraGapY
+        float targetBottomY = yCursor + extraGapY;
+
+        if (next.entry != null)
+        {
+            var pos = go.transform.position;
+            pos.y += (targetBottomY - next.entry.position.y);
+            go.transform.position = pos;
         }
         else
         {
-            // Align: næste bund = forrige top + extraGapY
-            float fromTopY = fromB.max.y;
-            float nextBottomY = nextB.min.y;
-
-            float dy = (fromTopY + extraGapY) - nextBottomY;
+            Bounds nb = GetWorldBounds(go.transform);
+            float currentBottom = (nb.size != Vector3.zero) ? nb.min.y : go.transform.position.y;
+            float dy = targetBottomY - currentBottom;
             go.transform.position += new Vector3(0f, dy, 0f);
-
-            // (valgfrit) hold X justeret til forrige centers X, så kolonnen er lige
-            // float dx = fromB.center.x - GetWorldBounds(go.transform).center.x;
-            // go.transform.position += new Vector3(dx, 0f, 0f);
         }
 
+        RoundY(go.transform, roundStep);
+        if (lockX) SetX(go.transform, lockXValue);
+
         live.Enqueue(next);
+        lastChunk = next;
+
+        // Opdatér cursoren til chunkets præcise top
+        yCursor = GetTopY(next);
+
+        // Trim køen
         while (live.Count > keepChunks)
         {
             var old = live.Dequeue();
@@ -125,68 +215,64 @@ public class LevelGenerator : MonoBehaviour
         }
     }
 
-    public void SpawnNewLevel(Transform fromTransform)
-    {
-        LevelChunk from = null;
-        if (fromTransform)
-        {
-            from = fromTransform.GetComponent<LevelChunk>();
-            if (!from) from = fromTransform.GetComponentInParent<LevelChunk>();
-        }
-
-        if (!from)
-        {
-            Debug.LogWarning("[LevelGenerator] SpawnNewLevel called but no LevelChunk found.");
-            return;
-        }
-        SpawnNext(from);
-    }
-
+    // ---------------- Hjælpere ----------------
     private GameObject GetRandomPrefab()
     {
         if (chunkPrefabs == null || chunkPrefabs.Length == 0) return null;
-        return chunkPrefabs[Random.Range(0, chunkPrefabs.Length)];
-    }
 
-    private void Update()
-    {
-        if (player && live.Count > 0)
+        // vælg en ikke-null prefab; tolerér null-slots
+        for (int i = 0; i < 8; i++)
         {
-            var oldest = live.Peek();
-            if (!oldest) { live.Dequeue(); return; }
-
-            // Brug bounds top til despawn (når spilleren er langt over den)
-            Bounds ob = GetWorldBounds(oldest.transform);
-            float referenceY = ob.size != Vector3.zero
-                ? ob.max.y
-                : (oldest.exit ? oldest.exit.position.y : oldest.transform.position.y);
-
-            if (player.position.y - referenceY > despawnBehindDistance)
-            {
-                live.Dequeue();
-                Destroy(oldest.gameObject);
-            }
+            var p = chunkPrefabs[Random.Range(0, chunkPrefabs.Length)];
+            if (p) return p;
         }
+        foreach (var p in chunkPrefabs) if (p) return p;
+        return null;
     }
 
-    private static void MirrorX(Transform t)
+    private static bool TryGetChunk(GameObject go, out LevelChunk chunk)
     {
-        var s = t.localScale;
-        s.x = -Mathf.Abs(s.x);
-        t.localScale = s;
+        chunk = null;
+        if (!go) return false;
+        chunk = go.GetComponent<LevelChunk>() ?? go.GetComponentInChildren<LevelChunk>();
+        return chunk != null;
     }
 
-    /// <summary>
-    /// Finder samlede world-bounds for et chunk:
-    /// 1) Alle Renderers
-    /// 2) Ellers alle Colliders
-    /// 3) Ellers alle børns positioner
-    /// Returnerer Bounds med size=0 hvis intet findes.
-    /// </summary>
+    private static void AlignBottomToY(Transform t, float targetY)
+    {
+        Bounds b = GetWorldBounds(t);
+        if (b.size == Vector3.zero) return;
+        float dy = targetY - b.min.y;
+        t.position += new Vector3(0f, dy, 0f);
+    }
+
+    private static void SetX(Transform t, float x)
+    {
+        var p = t.position; p.x = x; t.position = p;
+    }
+
+    private static float GetTopY(LevelChunk chunk)
+    {
+        if (chunk.exit != null) return chunk.exit.position.y;
+        Bounds b = GetWorldBounds(chunk.transform);
+        if (b.size != Vector3.zero) return b.max.y;
+        return chunk.transform.position.y;
+    }
+
+    private static float RoundToStep(float v, float step) => Mathf.Round(v / step) * step;
+
+    private static void RoundY(Transform t, float step)
+    {
+        var p = t.position;
+        p.y = RoundToStep(p.y, step);
+        t.position = p;
+    }
+
+    /// <summary>World-bounds fra Renderers, ellers Colliders, ellers child-positions.</summary>
     private static Bounds GetWorldBounds(Transform root)
     {
         var rends = root.GetComponentsInChildren<Renderer>(true);
-        if (rends != null && rends.Length > 0)
+        if (rends.Length > 0)
         {
             Bounds b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
@@ -194,16 +280,15 @@ public class LevelGenerator : MonoBehaviour
         }
 
         var cols = root.GetComponentsInChildren<Collider>(true);
-        if (cols != null && cols.Length > 0)
+        if (cols.Length > 0)
         {
             Bounds b = cols[0].bounds;
             for (int i = 1; i < cols.Length; i++) b.Encapsulate(cols[i].bounds);
             return b;
         }
 
-        // Fallback: brug børns transforms
         var trs = root.GetComponentsInChildren<Transform>(true);
-        if (trs != null && trs.Length > 1) // inkluderer root selv
+        if (trs.Length > 1)
         {
             Bounds b = new Bounds(trs[0].position, Vector3.zero);
             for (int i = 1; i < trs.Length; i++) b.Encapsulate(trs[i].position);
