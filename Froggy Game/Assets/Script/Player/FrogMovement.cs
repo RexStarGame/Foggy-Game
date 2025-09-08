@@ -13,6 +13,8 @@ public class FrogMovement : MonoBehaviour
     // Score
     [SerializeField] private PlayerScore playerScore;
     [SerializeField] private DeathScreenUI deathScreenUI;
+    [SerializeField] private GameObject flyCollectParticles;
+
     // UI / VFX
     [SerializeField] GameObject deathMenu;
     [SerializeField] GameObject blood;
@@ -135,12 +137,9 @@ public class FrogMovement : MonoBehaviour
         // Stop motion
         StopAllCoroutines();
         isMoving = false;
-
-
-        // Disable collisions
+        // ❌ Turn off collisions so cars pass through
         foreach (var c in myCols) if (c) c.enabled = false;
-
-        // Move to dead layer
+        // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
         foreach (var t in GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = deadLayer;
 
@@ -159,6 +158,25 @@ public class FrogMovement : MonoBehaviour
         {
             GameOver();
         }
+        else if (other.CompareTag("Fly")) // 🪰 <-- new check
+        {
+            CollectFly(other.gameObject);
+        }
+    }
+    private void CollectFly(GameObject fly)
+    {
+        if (playerScore != null)
+        {
+            playerScore.AddScore(500); // add 500 points
+        }
+
+        if (flyCollectParticles != null)
+        {
+            GameObject particles = Instantiate(flyCollectParticles, fly.transform.position, Quaternion.identity);
+            Destroy(particles, 2f); // clean up after a short delay
+        }
+
+        Destroy(fly); // remove the fly from the scene
     }
 
     public void RestartGame()

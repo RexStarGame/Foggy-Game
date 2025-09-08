@@ -40,5 +40,10 @@ public class PlayerScore : MonoBehaviour
             PlayerPrefs.Save();
         }
     }
+    public void AddScore(int amount)
+    {
+        score += amount;
+        UpdateScoreText();
+    }
 
 }
