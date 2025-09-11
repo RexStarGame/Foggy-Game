@@ -10,6 +10,10 @@ public class FrogMovement : MonoBehaviour
     public float gridSize = 2f;
     public float timeToMove = 0.2f;
 
+    // Water level
+    bool isInWater = false;
+    bool onLog = false;
+
     // Score
     [SerializeField] private PlayerScore playerScore;
     [SerializeField] private DeathScreenUI deathScreenUI;
@@ -63,10 +67,10 @@ public class FrogMovement : MonoBehaviour
 
         if (isDead) return; // block input while dead
 
-        if (Input.GetKey(KeyCode.W) && !isMoving) StartCoroutine(MovePlayer(Vector3.up));
-        if (Input.GetKey(KeyCode.A) && !isMoving) StartCoroutine(MovePlayer(Vector3.left));
-        if (Input.GetKey(KeyCode.D) && !isMoving) StartCoroutine(MovePlayer(Vector3.right));
-        if (Input.GetKey(KeyCode.S) && !isMoving) StartCoroutine(MovePlayer(Vector3.down));
+        if (Input.GetKey(KeyCode.A) && !isMoving) StartCoroutine(MovePlayer(Vector3.up));
+        if (Input.GetKey(KeyCode.W) && !isMoving) StartCoroutine(MovePlayer(Vector3.left));
+        if (Input.GetKey(KeyCode.S) && !isMoving) StartCoroutine(MovePlayer(Vector3.right));
+        if (Input.GetKey(KeyCode.D) && !isMoving) StartCoroutine(MovePlayer(Vector3.down));
     }
 
     private System.Collections.IEnumerator MovePlayer(Vector3 direction)
@@ -118,6 +122,7 @@ public class FrogMovement : MonoBehaviour
 
         isMoving = false;
 
+        CheckIfSafe();
 
         // Stop moving → back to idle
         move.SetBool("JumpMove", false);
@@ -125,6 +130,32 @@ public class FrogMovement : MonoBehaviour
 
         isMoving = false;
     }
+    private void CheckIfSafe()
+    {
+        float checkRadius = 0.7f;
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, checkRadius);
+
+        bool onSafeGround = false;
+        bool touchingLog = false;
+
+        foreach (var hit in hits)
+        {
+            Debug.Log("Frog is touching: " + hit.name + " with tag " + hit.tag);
+
+            if (hit.CompareTag("Ground") || hit.CompareTag("SafeZone"))
+                onSafeGround = true;
+
+            if (hit.CompareTag("Log"))
+                touchingLog = true;
+        }
+
+        // Logs take priority over water
+        if (onSafeGround || touchingLog || onLog)
+            return;
+
+        GameOver();
+    }
+
 
     public void GameOver()
     {
@@ -137,9 +168,9 @@ public class FrogMovement : MonoBehaviour
         // Stop motion
         StopAllCoroutines();
         isMoving = false;
-        // ❌ Turn off collisions so cars pass through
+        // Turn off collisions so cars pass through
         foreach (var c in myCols) if (c) c.enabled = false;
-        // 🔄 Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
+        // Move entire frog hierarchy to a "Dead" (or Ignore Raycast) layer
         foreach (var t in GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = deadLayer;
 
@@ -158,16 +189,48 @@ public class FrogMovement : MonoBehaviour
         {
             GameOver();
         }
-        else if (other.CompareTag("Fly")) // 🪰 <-- new check
+        else if (other.CompareTag("Fly"))
         {
             CollectFly(other.gameObject);
         }
+        else if (other.CompareTag("Log"))
+        {
+            onLog = true;
+
+            // Optional: parent to log to move with it
+            transform.SetParent(other.transform);
+        }
     }
+
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Log"))
+        {
+            onLog = false;
+
+            // Check if we’re still touching another log before unparenting
+            Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 0.7f);
+            foreach (var hit in hits)
+            {
+                if (hit.CompareTag("Log"))
+                {
+                    transform.SetParent(hit.transform);
+                    onLog = true;
+                    return;
+                }
+            }
+
+            // If no other logs → unparent
+            transform.SetParent(null);
+        }
+    }
+
+
     private void CollectFly(GameObject fly)
     {
         if (playerScore != null)
         {
-            playerScore.AddScore(500); // add 500 points
+            playerScore.AddScore(250); // add 250 score
         }
 
         if (flyCollectParticles != null)

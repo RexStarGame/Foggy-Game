@@ -6,6 +6,10 @@ TagManager:
   tags:
   - Enemies
   - Fly
+  - Water
+  - Log
+  - Ground
+  - SafeZone
   layers:
   - Default
   - TransparentFX
