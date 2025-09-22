@@ -37,7 +37,8 @@ public class FrogMovement : MonoBehaviour
     int defaultLayer;
     int deadLayer; // "Dead" layer if present else Ignore Raycast
 
-    Animator move;
+    private Animator animator;
+
     bool onLog = false;
 
     // -------- Grid overlay (draws the SAME grid) ----------
@@ -72,7 +73,7 @@ public class FrogMovement : MonoBehaviour
 
     void Start()
     {
-        move = GetComponent<Animator>();
+        animator = GetComponent<Animator>();
         if (blood) blood.SetActive(false);
 
         defaultFixedDelta = Time.fixedDeltaTime;
@@ -98,11 +99,18 @@ public class FrogMovement : MonoBehaviour
 
         if (isDead) return;
 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            animator.SetTrigger("Tongue");
+            return; // stop here so it doesn’t also trigger movement
+        }
         // WASD movement (keep your original key mapping)
         if (Input.GetKey(KeyCode.A) && !isMoving) StartCoroutine(MovePlayer(Vector3.up));
         if (Input.GetKey(KeyCode.W) && !isMoving) StartCoroutine(MovePlayer(Vector3.left));
         if (Input.GetKey(KeyCode.S) && !isMoving) StartCoroutine(MovePlayer(Vector3.right));
         if (Input.GetKey(KeyCode.D) && !isMoving) StartCoroutine(MovePlayer(Vector3.down));
+
+
     }
 
     // ===== Movement on the global grid =====
@@ -110,10 +118,10 @@ public class FrogMovement : MonoBehaviour
     {
         isMoving = true;
 
-        if (move)
+        if (animator)
         {
-            move.SetBool("JumpMove", true);
-            move.SetBool("Idle", false);
+            animator.SetBool("JumpMove", true);
+            animator.SetBool("Idle", false);
         }
 
         // Face the hop direction
@@ -161,10 +169,10 @@ public class FrogMovement : MonoBehaviour
 
         if (playerScore != null) playerScore.TryAddScore(transform.position);
 
-        if (move)
+        if (animator)
         {
-            move.SetBool("JumpMove", false);
-            move.SetBool("Idle", true);
+            animator.SetBool("JumpMove", false);
+            animator.SetBool("Idle", true);
         }
 
         isMoving = false;
