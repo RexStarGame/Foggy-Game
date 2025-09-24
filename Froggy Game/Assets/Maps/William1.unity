@@ -3286,7 +3286,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e821e7c7c5c1ae499cdae8dcea54f12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 2.3
+  moveSpeed: 2.5
   MaxMoveSpeed: 50
   startDelay: 10
   playerPos: {fileID: 300356984726912616}
