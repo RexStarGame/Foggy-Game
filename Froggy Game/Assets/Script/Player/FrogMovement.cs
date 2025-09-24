@@ -220,7 +220,7 @@ public class FrogMovement : MonoBehaviour
         isDead = true;
 
         if (blood) blood.SetActive(true);
-
+        GameState.IsPlayerAlive = false;   // <- tells PauseManager to block pause
         StopAllCoroutines();
         isMoving = false;
 
@@ -289,7 +289,7 @@ public class FrogMovement : MonoBehaviour
     {
         foreach (var c in myCols) if (c) c.enabled = true;
         foreach (var t in GetComponentsInChildren<Transform>(true)) t.gameObject.layer = defaultLayer;
-
+        GameState.IsPlayerAlive = true;   // <- tells PauseManager to block pause
         Time.timeScale = 1f;
         Time.fixedDeltaTime = defaultFixedDelta;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

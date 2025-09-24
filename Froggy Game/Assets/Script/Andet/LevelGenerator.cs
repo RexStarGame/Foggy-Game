@@ -2,60 +2,53 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Minimal chunk-komponent med ankre. Sæt 'entry' i bunden og 'exit' i toppen af dit chunk.
-/// </summary>
-
-
-/// <summary>
-/// Drift-fri level generator: next.entry snappes til yCursor (sidste top) + extraGapY.
-/// Kræver ankre som standard (kan slås fra), runder Y for at undgå float-drift,
-/// auto-spawner foran spilleren og despawner bagved.
+/// Drift-free level generator: aligns next chunk's entry to yCursor (last top) + extraGapY,
+/// rounds Y to avoid float drift, auto-spawns ahead of the player and despawns behind.
+/// Requires chunks providing a LevelChunk component (which itself exposes 'entry' & 'exit').
 /// </summary>
 public class LevelGenerator : MonoBehaviour
 {
-    public Transform entry; // nederste kant
-    public Transform exit;  // øverste kant
     [Header("Spawn Mode")]
     [Tooltip("If true, spawns are handled automatically from Update()")]
     public bool useAutoSpawn = true;
-    [SerializeField] private float spawnCooldown = 0.05f; // sikring mod dobbelt-spawn
+    [SerializeField] private float spawnCooldown = 0.05f;
     private float lastSpawnTime = -999f;
 
     [Header("Setup")]
-    [Tooltip("Prefabs der hver indeholder et LevelChunk (på sig selv eller child).")]
+    [Tooltip("Prefabs that each contain a LevelChunk (on self or a child).")]
     public GameObject[] chunkPrefabs;
-    [Tooltip("Placering af første chunk (valgfri).")]
+    [Tooltip("Optional initial placement for the first chunk.")]
     public Transform spawnPointA;
-    [Tooltip("Spillerens transform (bruges til auto-spawn/despawn).")]
+    [Tooltip("Player transform (used for auto-spawn/despawn).")]
     public Transform player;
 
     [Header("Placement")]
-    [Tooltip("Lodret afstand mellem chunks (oven på exit->entry justering).")]
+    [Tooltip("Vertical gap added between chunks.")]
     public float extraGapY = 0f;
-    [Tooltip("Lås alle chunks til samme X-koordinat.")]
+    [Tooltip("Lock all chunks to the same X coordinate.")]
     public bool lockX = true;
-    [Tooltip("X-koordinat til lock.")]
+    [Tooltip("X coordinate used when lockX is true.")]
     public float lockXValue = 0f;
 
     [Header("Lifetime")]
-    [Tooltip("Hvor mange chunks holdes i live-køen.")]
+    [Tooltip("How many chunks to keep alive in the queue.")]
     public int keepChunks = 6;
-    [Tooltip("Despawn når spilleren er så langt over chunk-top (Y).")]
+    [Tooltip("Despawn when player is this far above a chunk's top (Y).")]
     public float despawnBehindDistance = 40f;
-    [Tooltip("Spawn når spilleren er så tæt på sidste top (Y).")]
+    [Tooltip("Spawn when player is this close to last top (Y).")]
     public float spawnAheadDistance = 25f;
 
     [Header("Validation")]
     [Tooltip("If true, refuse to spawn chunks that don't have entry+exit anchors.")]
     public bool requireAnchors = true;
-    [Tooltip("Round final Y positions to this step to avoid float drift.")]
+    [Tooltip("Round final Y positions to this step to avoid float drift. Set <= 0 to disable.")]
     public float roundStep = 0.001f;
 
     // Runtime
     private readonly Queue<LevelChunk> live = new Queue<LevelChunk>();
     private LevelChunk lastChunk;
     private bool quitting;
-    private float yCursor; // præcis top-Y for sidste chunk (drift-fri lineal)
+    private float yCursor; // precise top-Y for last chunk (drift-free ruler)
 
     private void OnApplicationQuit() => quitting = true;
 
@@ -65,18 +58,16 @@ public class LevelGenerator : MonoBehaviour
 
         if (chunkPrefabs == null || chunkPrefabs.Length == 0)
         {
-            Debug.LogError("[LevelGenerator] No chunkPrefabs assigned.");
             enabled = false;
             return;
         }
 
-        // ---- Første chunk ----
+        // ---- First chunk ----
         Vector3 startPos = spawnPointA ? spawnPointA.position : Vector3.zero;
 
         GameObject firstGO = Instantiate(GetRandomPrefab(), startPos, Quaternion.identity);
         if (!TryGetChunk(firstGO, out var first))
         {
-            Debug.LogError("[LevelGenerator] First chunk missing LevelChunk.");
             Destroy(firstGO);
             enabled = false;
             return;
@@ -84,13 +75,12 @@ public class LevelGenerator : MonoBehaviour
 
         if (requireAnchors && first.entry == null)
         {
-            Debug.LogError("[LevelGenerator] First chunk missing 'entry' while requireAnchors = true.");
             Destroy(firstGO);
             enabled = false;
             return;
         }
 
-        // Justér så entry rammer startPos.y, ellers brug bund-bounds
+        // Align so entry hits startPos.y, else use bottom bounds
         if (first.entry != null)
         {
             var p = firstGO.transform.position;
@@ -107,9 +97,9 @@ public class LevelGenerator : MonoBehaviour
 
         live.Enqueue(first);
         lastChunk = first;
-        yCursor = GetTopY(first); // cursor = præcis første top
+        yCursor = GetTopY(first);
 
-        // Seed et par stykker mere
+        // Seed a couple more
         int seed = Mathf.Clamp(keepChunks - 1, 0, 3);
         for (int i = 0; i < seed; i++) SpawnNextByCursor();
         lastSpawnTime = Time.time;
@@ -119,7 +109,7 @@ public class LevelGenerator : MonoBehaviour
     {
         if (!player) return;
 
-        // DESPAWN – fjern ældste bag spilleren
+        // DESPAWN – remove oldest behind the player
         if (live.Count > 0)
         {
             var oldest = live.Peek();
@@ -135,7 +125,7 @@ public class LevelGenerator : MonoBehaviour
             }
         }
 
-        // AUTO-SPAWN – læg nyt foran spilleren
+        // AUTO-SPAWN – place new ahead of player
         if (useAutoSpawn && lastChunk)
         {
             if (player.position.y + spawnAheadDistance > yCursor &&
@@ -147,41 +137,35 @@ public class LevelGenerator : MonoBehaviour
         }
     }
 
-    // ---------- Public: manuel spawn hvis du vil kalde den fra UI/Debug ----------
+    // Public: manual spawn if you want to call it from UI
     public void SpawnNext()
     {
         SpawnNextByCursor();
         lastSpawnTime = Time.time;
     }
 
-    // ---------- Intern: drift-fri spawn baseret på yCursor ----------
+    // Internal: drift-free spawn based on yCursor
     private void SpawnNextByCursor()
     {
         if (quitting) return;
 
         GameObject prefab = GetRandomPrefab();
-        if (!prefab)
-        {
-            Debug.LogWarning("[LevelGenerator] GetRandomPrefab returned null.");
-            return;
-        }
+        if (!prefab) return;
 
         GameObject go = Instantiate(prefab, Vector3.zero, Quaternion.identity);
         if (!TryGetChunk(go, out var next))
         {
-            Debug.LogError("[LevelGenerator] Spawned prefab has no LevelChunk.");
             Destroy(go);
             return;
         }
 
         if (requireAnchors && next.entry == null)
         {
-            Debug.LogError("[LevelGenerator] Missing entry on spawned chunk while requireAnchors = true.");
             Destroy(go);
             return;
         }
 
-        // Placer så next.entry (eller bund-bounds) = yCursor + extraGapY
+        // Place so next.entry (or bottom-bounds) = yCursor + extraGapY
         float targetBottomY = yCursor + extraGapY;
 
         if (next.entry != null)
@@ -204,10 +188,10 @@ public class LevelGenerator : MonoBehaviour
         live.Enqueue(next);
         lastChunk = next;
 
-        // Opdatér cursoren til chunkets præcise top
+        // Update cursor to the precise top of this chunk
         yCursor = GetTopY(next);
 
-        // Trim køen
+        // Trim queue
         while (live.Count > keepChunks)
         {
             var old = live.Dequeue();
@@ -215,12 +199,12 @@ public class LevelGenerator : MonoBehaviour
         }
     }
 
-    // ---------------- Hjælpere ----------------
+    // ---------------- Helpers ----------------
     private GameObject GetRandomPrefab()
     {
         if (chunkPrefabs == null || chunkPrefabs.Length == 0) return null;
 
-        // vælg en ikke-null prefab; tolerér null-slots
+        // pick a non-null prefab; tolerate null slots
         for (int i = 0; i < 8; i++)
         {
             var p = chunkPrefabs[Random.Range(0, chunkPrefabs.Length)];
@@ -259,7 +243,11 @@ public class LevelGenerator : MonoBehaviour
         return chunk.transform.position.y;
     }
 
-    private static float RoundToStep(float v, float step) => Mathf.Round(v / step) * step;
+    private static float RoundToStep(float v, float step)
+    {
+        if (step <= 0f) return v;
+        return Mathf.Round(v / step) * step;
+    }
 
     private static void RoundY(Transform t, float step)
     {
@@ -268,7 +256,7 @@ public class LevelGenerator : MonoBehaviour
         t.position = p;
     }
 
-    /// <summary>World-bounds fra Renderers, ellers Colliders, ellers child-positions.</summary>
+    /// <summary>World-bounds from Renderers, else Colliders, else child positions.</summary>
     private static Bounds GetWorldBounds(Transform root)
     {
         var rends = root.GetComponentsInChildren<Renderer>(true);

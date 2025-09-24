@@ -18,7 +18,10 @@ public class PauseManager : MonoBehaviour
 
     void Update()
     {
-        // --- P pressed? ---
+        // Block all pause behavior if the player is dead
+        if (!GameState.IsPlayerAlive) return;
+
+        // P pressed?
         if (Input.GetKeyDown(KeyCode.P))
         {
             if (!isPaused)
@@ -39,6 +42,9 @@ public class PauseManager : MonoBehaviour
 
     public void TogglePause()
     {
+        // Safety: never allow pausing when dead
+        if (!GameState.IsPlayerAlive) return;
+
         isPaused = !isPaused;
 
         Time.timeScale = isPaused ? 0f : 1f;
@@ -74,27 +80,26 @@ public class PauseManager : MonoBehaviour
 
     void FocusFirstButton()
     {
-        // Fald tilbage hvis du har glemt at tildele i Inspector
-        if (!firstSelected)
+        if (!firstSelected && pausePanel)
             firstSelected = pausePanel.GetComponentInChildren<Button>();
 
         if (firstSelected)
-            EventSystem.current.SetSelectedGameObject(firstSelected.gameObject);
+            EventSystem.current?.SetSelectedGameObject(firstSelected.gameObject);
     }
 
     void ClearUIFocus() =>
-        EventSystem.current.SetSelectedGameObject(null);
+        EventSystem.current?.SetSelectedGameObject(null);
 
     void ClickCurrentSelection()
     {
-        var sel = EventSystem.current.currentSelectedGameObject;
+        var sel = EventSystem.current?.currentSelectedGameObject;
         if (sel != null && sel.TryGetComponent(out Button btn))
         {
             btn.onClick.Invoke();
         }
         else
         {
-            // Ingen UI valgt => brug P som “unpause”
+            // No UI selected => use P as “unpause”
             TogglePause();
         }
     }
